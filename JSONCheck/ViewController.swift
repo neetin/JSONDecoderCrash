@@ -21,8 +21,7 @@ class ViewController: UIViewController {
       let flow = try JSONDecoder().decode(Flow.self, from:rawData)
         print(flow.connectionId)
       
-      print(flow.screen.properties.screen0Config?.properties?.viewBackgroundColor)
-      print(flow.screen.properties.screen0Config?.properties?.screenComponentList)
+      print("Flow Screen: \(flow.screen)")
         
     } catch (let error) {
       print(error)
