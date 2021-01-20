@@ -22,80 +22,7 @@ extension Optional {
   }
 }
 
-public protocol KeyPathDeclaration
-{
-  static var keyPaths: [String : PartialKeyPath<Self>] { get }
-}
 
-
-public enum JSONValue: Decodable {
-  case string(String)
-  case int(Int)
-  case double(Double)
-  case bool(Bool)
-  case object([String: JSONValue])
-  case array([JSONValue])
-  
-  public init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    self = try ((try? container.decode(String.self)).map(JSONValue.string))
-      .or((try? container.decode(Int.self)).map(JSONValue.int))
-      .or((try? container.decode(Double.self)).map(JSONValue.double))
-      .or((try? container.decode(Bool.self)).map(JSONValue.bool))
-      .or((try? container.decode([String: JSONValue].self)).map(JSONValue.object))
-      .or((try? container.decode([JSONValue].self)).map(JSONValue.array))
-      .resolve(with: DecodingError.typeMismatch(JSONValue.self, DecodingError.Context(codingPath: container.codingPath, debugDescription: "Not a JSON")))
-  }
-  
-  func getStringValue() -> String? {
-    switch self {
-    case .string(let value):
-      return value
-    default:
-      return nil
-    }
-  }
-  
-  func getBoolValue() -> Bool? {
-    switch self {
-    case .bool(let value):
-      return value
-    default:
-      return nil
-    }
-  }
-  
-  func getDoubleValue() ->Double? {
-    switch self {
-    case .double(let value):
-      return value
-    case .int(let value):
-      return Double(value)
-    case .string(let value):
-      return Double(value)
-    default:
-      return nil
-    }
-  }
-  
-  func getObjectValue() -> [String: JSONValue]? {
-    switch self {
-    case .object(let value):
-      return value
-    default:
-      return nil
-    }
-  }
-  
-  func getArrayValue() -> [JSONValue] {
-    switch self {
-    case .array(let value):
-      return value
-    default:
-      return []
-    }
-  }
-}
 
 struct UserViewItems: Decodable {
   var propertyName: String?
@@ -169,7 +96,7 @@ struct MetaData: Decodable {
   }
 }
 
-struct UserView: Decodable, KeyPathDeclaration {
+struct UserView: Decodable {
   var screenTemplateName: String
   var screenConfigName: String? = nil
   var items: [UserViewItems]
@@ -194,132 +121,7 @@ struct UserView: Decodable, KeyPathDeclaration {
       print("decoding error items on UserView")
     }
   }
-  
-  static var keyPaths: [String : PartialKeyPath<UserView>] {
-    return ["screenTemplateName" : \UserView.screenTemplateName, "screenConfigName" : \UserView.screenConfigName, "items" : \UserView.items]
-  }
-}
 
-struct PostProcessNextEvent: Decodable {
-  var constructType: String? = nil
-  var eventName: String? = nil
-  var params: [String]? = []
-  var eventType: String? = nil
-  
-  enum CodingKeys: String, CodingKey {
-    case eventName, params, eventType, constructType
-  }
-  
-  init(from decoder: Decoder) throws {
-    
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    do {
-      constructType = try container.decode(String.self, forKey: .constructType)
-    } catch {
-      constructType = nil
-      print("catch decoding constructType on PostProcessNextEvent ")
-    }
-    do {
-      eventName = try container.decode(String.self, forKey: .eventName)
-    } catch {
-      eventName = nil
-      print("catch decoding on eventName on PostProcessNextEvent")
-    }
-    do {
-      eventType = try container.decode(String.self, forKey: .eventType)
-    } catch {
-      print("error decoding eventType on PostProcessNextEvent")
-    }
-  }
-}
-
-struct EventsPostProcess: Decodable{
-  var localEvent: String? = nil
-  var nextEvent: PostProcessNextEvent? = nil
-  var gotoNextUserView: Bool? = false
-  // By default in nextEvent, we'll go to the next user View unless specified otherwise in the manifest
-  
-  enum CodingKeys: String, CodingKey {
-    case localEvent, nextEvent, gotoNextUserView
-  }
-  
-  init(from decoder: Decoder) throws {
-    
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    do {
-      localEvent = try container.decode(String.self, forKey: .localEvent)
-    } catch {
-      localEvent = nil
-      print("catch decoding error localEvent on  EventsPostProcess")
-    }
-    do {
-      nextEvent = try container.decode(PostProcessNextEvent.self, forKey: .nextEvent)
-    }catch {
-      nextEvent = nil
-      print("catch decoding error nextEvent on  EventsPostProcess")
-    }
-    do {
-      gotoNextUserView = try container.decode(Bool.self, forKey: .gotoNextUserView)
-    } catch {
-      gotoNextUserView = nil
-      print("error decoding gotoNextUserView on EventsPostProcess")
-    }
-  }
-}
-
-struct EventsProperties: Decodable {
-  var eventName: String? = nil
-  var type: String? = nil
-  var constructType: String? = nil
-  var params: [String]? = []
-  var eventType: String? = nil
-  var preProcess: [String:String]? = [:]
-  var postProcess: EventsPostProcess? = nil
-  var nextUserViewIndex: Int? = nil
-  
-  enum CodingKeys: String, CodingKey {
-    case eventName, type, params, eventType, preProcess, postProcess, nextUserViewIndex, constructType
-  }
-  
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    do {
-      eventName = try container.decode(String.self, forKey: .eventName)
-    } catch {
-      eventName = nil
-      print("catch decoding error eventName on  EventsProperties")
-    }
-    do {
-      type = try container.decode(String.self, forKey: .type)
-    }  catch {
-      type = nil
-      print("catch decoding error type on  EventsProperties")
-    }
-    do {
-      constructType = try container.decode(String.self, forKey: .constructType)
-    }  catch {
-      constructType = nil
-      print("catch decoding error constructType on  EventsProperties")
-    }
-    do {
-      eventType = try container.decode(String.self, forKey: .eventType)
-    }  catch {
-      eventType = nil
-      print("catch decoding error eventType on  EventsProperties")
-    }
-    do {
-      postProcess = try container.decode(EventsPostProcess.self, forKey: .postProcess)
-    }  catch {
-      postProcess = nil
-      print("catch decoding error postProcess on  EventsProperties")
-    }
-    do {
-      nextUserViewIndex = try container.decode(Int.self, forKey: .nextUserViewIndex)
-    } catch {
-      nextUserViewIndex = nil
-      print("error decoding error nextUserViewIndex on EventsProperties")
-    }
-  }
 }
 
 struct EnumOptions: Decodable {
@@ -420,19 +222,15 @@ struct Properties: Decodable {
 }
 
 
-struct ParameterItems: Decodable, KeyPathDeclaration {
+struct ParameterItems: Decodable {
   var items: [String]
   
   enum CodingKeys: String, CodingKey {
     case items
   }
-  
-  static var keyPaths: [String : PartialKeyPath<ParameterItems>] {
-    return ["items" : \ParameterItems.items]
-  }
 }
 
-struct ScreenConfigProperties: Decodable, KeyPathDeclaration {
+struct ScreenConfigProperties: Decodable {
   var title: Properties?
   var subTitle: Properties?
   var bodyHeaderText: Properties?
@@ -454,10 +252,7 @@ struct ScreenConfigProperties: Decodable, KeyPathDeclaration {
   var footerLinkText: Properties?
   var firstLabel: Properties?
   var secondLabel: Properties?
-  var onLoadEvent: EventsProperties?
-  var nextEvent: EventsProperties?
   var parameters: ParameterItems?
-  var screenComponentList: ScreenComponentList?
   var navTitle: Properties?
   var fullScreenMode: Properties?
   var messageTitle: Properties?
@@ -476,7 +271,7 @@ struct ScreenConfigProperties: Decodable, KeyPathDeclaration {
   var navbarBackgroundColor: Properties?
   
   enum CodingKeys: String, CodingKey {
-    case title, subTitle, bodyHeaderText, bodyText, nextButtonText, maskType, showMask, autoSubmit, bodyIcon0Name, bodyIcon0Link, showActivityIndicator, bodyIcon1Name, bodyIcon1Link, bodyIcon2Name, bodyIcon2Link, bodyBackgroundTransparent, showPoweredBy, footerLinkText, firstLabel, secondLabel, onLoadEvent, nextEvent, bodyIcon0LinkPng, parameters, screenComponentList, navTitle, fullScreenMode, messageTitle, message, challenge, enablePolling, pollRetries, pollInterval, viewPaddingTop, viewPaddingRight, viewPaddingBottom, viewPaddingLeft, viewTextColor, viewBackgroundColor, navbarTextColor, navbarBackgroundColor
+    case title, subTitle, bodyHeaderText, bodyText, nextButtonText, maskType, showMask, autoSubmit, bodyIcon0Name, bodyIcon0Link, showActivityIndicator, bodyIcon1Name, bodyIcon1Link, bodyIcon2Name, bodyIcon2Link, bodyBackgroundTransparent, showPoweredBy, footerLinkText, firstLabel, secondLabel, bodyIcon0LinkPng, parameters, navTitle, fullScreenMode, messageTitle, message, challenge, enablePolling, pollRetries, pollInterval, viewPaddingTop, viewPaddingRight, viewPaddingBottom, viewPaddingLeft, viewTextColor, viewBackgroundColor, navbarTextColor, navbarBackgroundColor
   }
   
   init(from decoder: Decoder) throws {
@@ -592,18 +387,6 @@ struct ScreenConfigProperties: Decodable, KeyPathDeclaration {
       print(" error decoding secondLabel on ScreenConfigProperties")
     }
     do {
-      onLoadEvent = try container.decode(EventsProperties.self, forKey: .onLoadEvent)
-    } catch {
-      onLoadEvent = nil
-      print(" error decoding onLoadEvent on ScreenConfigProperties")
-    }
-    do {
-      nextEvent = try container.decode(EventsProperties.self, forKey: .nextEvent)
-    } catch {
-      nextEvent = nil
-      print(" error decoding nextEvent on ScreenConfigProperties")
-    }
-    do {
       bodyIcon0LinkPng = try container.decode(Properties.self, forKey: .bodyIcon0LinkPng)
     } catch {
       bodyIcon0LinkPng = nil
@@ -614,12 +397,6 @@ struct ScreenConfigProperties: Decodable, KeyPathDeclaration {
     } catch {
       parameters = nil
       print(" error decoding parameters on ScreenConfigProperties")
-    }
-    do {
-      screenComponentList = try container.decode(ScreenComponentList.self, forKey: .screenComponentList)
-    } catch {
-      screenComponentList = nil
-      print(" error decoding screenComponentList on ScreenConfigProperties")
     }
     do {
       navTitle = try container.decode(Properties.self, forKey: .navTitle)
@@ -726,44 +503,9 @@ struct ScreenConfigProperties: Decodable, KeyPathDeclaration {
       print(" error decoding nextButtonText on ScreenConfigProperties")
     }
   }
-  
-  static var keyPaths: [String : PartialKeyPath<ScreenConfigProperties>] {
-    return ["title" : \ScreenConfigProperties.title, "subTitle" : \ScreenConfigProperties.subTitle,
-            "bodyHeaderText" : \ScreenConfigProperties.bodyHeaderText, "bodyText" : \ScreenConfigProperties.bodyText,
-            "nextButtonText" : \ScreenConfigProperties.nextButtonText, "maskType" : \ScreenConfigProperties.maskType,
-            "showMask" : \ScreenConfigProperties.showMask, "autoSubmit" : \ScreenConfigProperties.autoSubmit,
-            "bodyIcon0Name" : \ScreenConfigProperties.bodyIcon0Name, "bodyIcon0Link" : \ScreenConfigProperties.bodyIcon0Link,
-            "bodyIcon0LinkPng" : \ScreenConfigProperties.bodyIcon0LinkPng, "showActivityIndicator" : \ScreenConfigProperties.showActivityIndicator,
-            "bodyIcon1Name" : \ScreenConfigProperties.bodyIcon1Name, "bodyIcon1Link" : \ScreenConfigProperties.bodyIcon1Link,
-            "bodyIcon2Name" : \ScreenConfigProperties.bodyIcon2Name,
-            "bodyIcon2Link" : \ScreenConfigProperties.bodyIcon2Link, "bodyBackgroundTransparent" : \ScreenConfigProperties.bodyBackgroundTransparent,
-            "showPoweredBy" : \ScreenConfigProperties.showPoweredBy, "footerLinkText" : \ScreenConfigProperties.footerLinkText,
-            "firstLabel" : \ScreenConfigProperties.firstLabel, "secondLabel" : \ScreenConfigProperties.secondLabel,
-            "onLoadEvent" : \ScreenConfigProperties.onLoadEvent, "nextEvent" : \ScreenConfigProperties.nextEvent,
-            "parameters": \ScreenConfigProperties.parameters,
-            "screenComponentList" : \ScreenConfigProperties.screenComponentList,
-            "navTitle" : \ScreenConfigProperties.navTitle,
-            "fullScreenMode" : \ScreenConfigProperties.fullScreenMode,
-            "messageTitle" : \ScreenConfigProperties.messageTitle,
-            "message" : \ScreenConfigProperties.message,
-            "challenge" : \ScreenConfigProperties.challenge,
-            "enablePolling" : \ScreenConfigProperties.enablePolling,
-            "pollInterval" : \ScreenConfigProperties.pollInterval,
-            "pollRetries" : \ScreenConfigProperties.pollRetries,
-            "viewPaddingTop": \ScreenConfigProperties.viewPaddingTop,
-            "viewPaddingRight": \ScreenConfigProperties.viewPaddingRight,
-            "viewPaddingBottom": \ScreenConfigProperties.viewPaddingBottom,
-            "viewPaddingLeft": \ScreenConfigProperties.viewPaddingLeft,
-            "viewTextColor": \ScreenConfigProperties.viewTextColor,
-            "viewBackgroundColor": \ScreenConfigProperties.viewBackgroundColor,
-            "navbarTextColor": \ScreenConfigProperties.navbarTextColor,
-            "navbarBackgroundColor": \ScreenConfigProperties.navbarBackgroundColor
-    ]
-    
-  }
 }
 
-struct ScreenConfig: Decodable, KeyPathDeclaration {
+struct ScreenConfig: Decodable {
   var displayName: String?
   var type: String?
   var constructType: String?
@@ -771,7 +513,7 @@ struct ScreenConfig: Decodable, KeyPathDeclaration {
   var customerId: String?
   var companyId: String?
   var properties: ScreenConfigProperties?
-  var constructItems: [String]?
+  var constructItems: [String]
   
   enum CodingKeys: String, CodingKey {
     case displayName, type, constructType, createdDate, customerId, companyId, properties, constructItems
@@ -824,14 +566,10 @@ struct ScreenConfig: Decodable, KeyPathDeclaration {
       print(" error decoding constructItems on ScreenConfigProperties")
     }
   }
-  
-  static var keyPaths: [String : PartialKeyPath<ScreenConfig>] {
-    return ["displayName" : \ScreenConfig.displayName, "type" : \ScreenConfig.type, "constructType" : \ScreenConfig.constructType, "createdDate" : \ScreenConfig.createdDate, "customerId" : \ScreenConfig.customerId, "properties" : \ScreenConfig.properties, "constructItems" : \ScreenConfig.constructItems, "companyId": \ScreenConfig.companyId]
-  }
-  
+
 }
 
-struct MFAListValueProperties: Decodable, KeyPathDeclaration {
+struct MFAListValueProperties: Decodable {
   var screen0Config: ScreenConfig?
   var screen1Config: ScreenConfig?
   var screen2Config: ScreenConfig?
@@ -917,13 +655,6 @@ struct MFAListValueProperties: Decodable, KeyPathDeclaration {
       print("error on iconUrlPng MFAListValueProperties")
     }
   }
-  
-  static var keyPaths: [String : PartialKeyPath<MFAListValueProperties>] {
-    return ["screen0Config" : \MFAListValueProperties.screen0Config, "screen1Config" : \MFAListValueProperties.screen1Config, "screen2Config" : \MFAListValueProperties.screen2Config, "screen3Config" : \MFAListValueProperties.screen3Config, "screen4Config" : \MFAListValueProperties.screen4Config, "screen5Config" : \MFAListValueProperties.screen5Config, "title" : \MFAListValueProperties.title,
-            "description" : \MFAListValueProperties.description, "authDescription" : \MFAListValueProperties.authDescription,
-            "iconUrl" : \MFAListValueProperties.iconUrl, "iconUrlPng" : \MFAListValueProperties.iconUrlPng
-    ]
-  }
 }
 
 struct MFAListValue: Decodable {
@@ -986,7 +717,7 @@ struct MFAListValue: Decodable {
   }
 }
 
-struct MFAList: Decodable, KeyPathDeclaration {
+struct MFAList: Decodable {
   var displayName: String?
   var type: String?
   var constructType: String?
@@ -1045,204 +776,27 @@ struct MFAList: Decodable, KeyPathDeclaration {
       print("erorr decoding value on MfaList")
     }
   }
-  
-  static var keyPaths: [String : PartialKeyPath<MFAList>] {
-    return ["displayName" : \MFAList.displayName,
-            "type" : \MFAList.type, "constructType": \MFAList.constructType,  "createdDate" : \MFAList.createdDate,
-            "customerId" : \MFAList.customerId, "companyId" : \MFAList.companyId,
-            "value" : \MFAList.value
-    ]
-  }
-}
-
-struct ScreenCompoentListValueAttributes: Decodable, KeyPathDeclaration {
-  var variant: String?
-  var alignment: String?
-  var keyboardType: String?
-  var displayName: String?
-  var placeholder: String?
-  var color: String?
-  var hashedVisibility: Bool
-  var imageType: String?
-  var imageContentMode: String?
-  var height: Double? = 0
-  var options: [String]
-  
-  enum CodingKeys: String, CodingKey {
-    case variant, alignment, keyboardType, displayName, placeholder, color, hashedVisibility, imageType, imageContentMode, height, options
-  }
-  
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    do {
-      variant = try container.decode(String.self, forKey: .variant)
-    } catch {
-      variant = nil
-      print("decoding error on variant ScreenCompoentListValueAttributes")
-    }
-    do {
-      alignment = try container.decode(String.self, forKey: .alignment)
-    } catch {
-      alignment = nil
-      print("decoding error on alignment ScreenCompoentListValueAttributes")
-    }
-    do {
-      keyboardType = try container.decode(String.self, forKey: .keyboardType)
-    } catch {
-      keyboardType = nil
-      print("decoding error on keyboardType ScreenCompoentListValueAttributes")
-    }
-    do {
-      displayName = try container.decode(String.self, forKey: .displayName)
-    }  catch {
-      displayName = nil
-      print("decoding error on displayName ScreenCompoentListValueAttributes")
-    }
-    do {
-      placeholder = try container.decode(String.self, forKey: .placeholder)
-    }  catch {
-      placeholder = nil
-      print("decoding error on placeholder ScreenCompoentListValueAttributes")
-    }
-    do {
-      color = try container.decode(String.self, forKey: .color)
-    }  catch {
-      color = nil
-      print("decoding error on color ScreenCompoentListValueAttributes")
-    }
-    do {
-      hashedVisibility = try container.decode(Bool.self, forKey: .hashedVisibility)
-    } catch {
-      hashedVisibility = false
-      print("decoding error on hashedVisibility ScreenCompoentListValueAttributes")
-    }
-    do {
-      imageType = try container.decode(String.self, forKey: .imageType)
-    } catch {
-      imageType = nil
-      print("decoding error on imageType ScreenCompoentListValueAttributes")
-    }
-    do {
-      imageContentMode = try container.decode(String.self, forKey: .imageContentMode)
-    } catch {
-      imageContentMode = nil
-      print("decoding error on imageContentMode ScreenCompoentListValueAttributes")
-    }
-    do {
-      height = try container.decode(Double.self, forKey: .height)
-    }catch {
-      height = nil
-      print("decoding error on height ScreenCompoentListValueAttributes")
-    }
-  
-    do {
-      options = try container.decode(Array<String>.self, forKey: .options)
-    }catch {
-      options = []
-      print("decoding error on options ScreenCompoentListValueAttributes")
-    }
-    
-  }
-  
-  
-  static var keyPaths: [String : PartialKeyPath<ScreenCompoentListValueAttributes>] {
-    return ["variant" : \ScreenCompoentListValueAttributes.variant, "alignment" : \ScreenCompoentListValueAttributes.alignment,
-            "keyboardType" : \ScreenCompoentListValueAttributes.keyboardType, "displayName" : \ScreenCompoentListValueAttributes.displayName,
-            "placeholder" : \ScreenCompoentListValueAttributes.placeholder, "color" : \ScreenCompoentListValueAttributes.color,
-            "hashedVisibility" : \ScreenCompoentListValueAttributes.hashedVisibility, "imageType" : \ScreenCompoentListValueAttributes.imageType,
-            "imageContentMode" : \ScreenCompoentListValueAttributes.imageContentMode, "height" : \ScreenCompoentListValueAttributes.height,
-            "options" : \ScreenCompoentListValueAttributes.options]
-  }
-  
 }
 
 
-struct ScreenComponentListValue: Decodable, KeyPathDeclaration {
-  var propertyName: String?
-  var preferredControlType: String?
-  var value: JSONValue?
-  var attributes: ScreenCompoentListValueAttributes?
-  
-  enum CodingKeys: String, CodingKey {
-    case propertyName, preferredControlType, value, attributes
-  }
-  
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    do {
-      propertyName = try container.decode(String.self, forKey: .propertyName)
-      preferredControlType = try container.decode(String.self, forKey: .preferredControlType)
-      value = try container.decode(JSONValue.self, forKey: .value)
-      attributes = try container.decode(ScreenCompoentListValueAttributes.self, forKey: .attributes)
-    } catch {
-      print("decoding error on ScreenComponentListValue")
-    }
-  }
-  
-  
-  static var keyPaths: [String : PartialKeyPath<ScreenComponentListValue>] {
-    return ["preferredControlType" : \ScreenComponentListValue.preferredControlType, "propertyName": \ScreenComponentListValue.propertyName,
-            "attributes" : \ScreenComponentListValue.attributes, "value" : \ScreenComponentListValue.value
-    ]
-  }
-}
-
-struct ScreenComponentList: Decodable, KeyPathDeclaration {
-  var displayName: String?
-  var createdDate: Double?
-  var value: [ScreenComponentListValue]
-  
-  enum CodingKeys: String, CodingKey {
-    case displayName, createdDate, value
-  }
-  
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    do {
-      displayName = try container.decode(String.self, forKey: .displayName)
-    } catch {
-      print("decoding error displayName on ScreenComponentList")
-      displayName = nil
-    }
-    do {
-      createdDate = try container.decode(Double.self, forKey: .createdDate)
-    } catch {
-      createdDate = nil
-      print("decoding createdDate on ScreenComponentList")
-    }
-    
-    do {
-      value = try container.decode(Array<ScreenComponentListValue>.self, forKey: .value)
-    } catch {
-      value = []
-      print("decoding createdDate on ScreenComponentList")
-    }
-  }
-  
-  static var keyPaths: [String : PartialKeyPath<ScreenComponentList>] {
-    return ["displayName" : \ScreenComponentList.displayName,
-            "createdDate" : \ScreenComponentList.createdDate, "value" : \ScreenComponentList.value]
-  }
-}
-
-struct ScreenProperties: Decodable, KeyPathDeclaration {
+struct ScreenProperties: Decodable {
   var mfaList: MFAList?
   var screen0Config: ScreenConfig?
-  var screen1Config: ScreenConfig?
-  var screen2Config: ScreenConfig?
-  var screen3Config: ScreenConfig?
-  var screen4Config: ScreenConfig?
-  var screen5Config: ScreenConfig?
   var variableList: Properties?
   var title: Properties?
+  var screen2Config: ScreenConfig?
   var bodyText: Properties?
   var description: Properties?
+  var screen5Config: ScreenConfig?
   var authDescription: Properties?
+  var screen1Config: ScreenConfig?
   var iconUrl: Properties?
+  var screen4Config: ScreenConfig?
   var iconUrlPng: Properties?
+  var screen3Config: ScreenConfig?
   
   enum CodingKeys: String, CodingKey {
-    case mfaList, screen0Config, screen1Config, screen2Config, screen3Config, screen4Config, screen5Config, variableList, title, bodyText, description, authDescription, iconUrl, iconUrlPng
+    case mfaList, screen0Config,  screen1Config, screen2Config, screen3Config, variableList, title, bodyText, screen4Config, description, authDescription, iconUrl, iconUrlPng, screen5Config
   }
   
   init(from decoder: Decoder) throws {
@@ -1267,27 +821,22 @@ struct ScreenProperties: Decodable, KeyPathDeclaration {
       screen2Config = nil
       print("ScreenProperties screen2Config decoding error")
     }
-    
+
     do {
       screen3Config = try container.decode(ScreenConfig.self, forKey: .screen3Config)
     } catch {
       screen3Config = nil
       print("ScreenProperties screen3Config decoding error")
     }
-    
+
     do {
       screen4Config = try container.decode(ScreenConfig.self, forKey: .screen4Config)
     } catch  {
       screen4Config = nil
       print("ScreenProperties screen4Config decoding error")
     }
-    
-    do {
-      screen5Config = try container.decode(ScreenConfig.self, forKey: .screen5Config)
-    } catch  {
-      screen5Config = nil
-      print("ScreenProperties screen5Config decoding error")
-    }
+
+   
     
     do {
       variableList = try container.decode(Properties.self, forKey: .variableList)
@@ -1337,30 +886,16 @@ struct ScreenProperties: Decodable, KeyPathDeclaration {
       mfaList = nil
       print("ScreenProperties mfaList decoding error")
     }
-    
-  }
-  
-  
-  static var keyPaths: [String : PartialKeyPath<ScreenProperties>] {
-    return ["mfaList" : \ScreenProperties.mfaList,
-            "screen0Config" : \ScreenProperties.screen0Config,
-            "screen1Config" : \ScreenProperties.screen1Config,
-            "screen2Config" : \ScreenProperties.screen2Config,
-            "screen3Config" : \ScreenProperties.screen3Config,
-            "screen4Config" : \ScreenProperties.screen4Config,
-            "screen5Config" : \ScreenProperties.screen5Config,
-            "variableList" : \ScreenProperties.variableList,
-            "title" : \ScreenProperties.title,
-            "bodyText" : \ScreenProperties.bodyText,
-            "description" : \ScreenProperties.description,
-            "authDescription" : \ScreenProperties.authDescription,
-            "iconUrl" : \ScreenProperties.iconUrl,
-            "iconUrlPng" : \ScreenProperties.iconUrlPng
-    ]
+    do {
+      screen5Config = try container.decode(ScreenConfig.self, forKey: .screen5Config)
+    } catch  {
+      screen5Config = nil
+      print("ScreenProperties screen5Config decoding error")
+    }
   }
 }
 
-struct Screen: Decodable, KeyPathDeclaration {
+struct Screen: Decodable {
   var name: String
   var properties: ScreenProperties?
   var userViews: [UserView]
@@ -1477,6 +1012,77 @@ struct Flow: Decodable {
     } catch  {
       interactionId = ""
       print("Flow screen decoding error")
+    }
+  }
+}
+
+
+
+public enum JSONValue: Decodable {
+  case string(String)
+  case int(Int)
+  case double(Double)
+  case bool(Bool)
+  case object([String: JSONValue])
+  case array([JSONValue])
+  
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    self = try ((try? container.decode(String.self)).map(JSONValue.string))
+      .or((try? container.decode(Int.self)).map(JSONValue.int))
+      .or((try? container.decode(Double.self)).map(JSONValue.double))
+      .or((try? container.decode(Bool.self)).map(JSONValue.bool))
+      .or((try? container.decode([String: JSONValue].self)).map(JSONValue.object))
+      .or((try? container.decode([JSONValue].self)).map(JSONValue.array))
+      .resolve(with: DecodingError.typeMismatch(JSONValue.self, DecodingError.Context(codingPath: container.codingPath, debugDescription: "Not a JSON")))
+  }
+  
+  func getStringValue() -> String? {
+    switch self {
+    case .string(let value):
+      return value
+    default:
+      return nil
+    }
+  }
+  
+  func getBoolValue() -> Bool? {
+    switch self {
+    case .bool(let value):
+      return value
+    default:
+      return nil
+    }
+  }
+  
+  func getDoubleValue() ->Double? {
+    switch self {
+    case .double(let value):
+      return value
+    case .int(let value):
+      return Double(value)
+    case .string(let value):
+      return Double(value)
+    default:
+      return nil
+    }
+  }
+  
+  func getObjectValue() -> [String: JSONValue]? {
+    switch self {
+    case .object(let value):
+      return value
+    default:
+      return nil
+    }
+  }
+  
+  func getArrayValue() -> [JSONValue] {
+    switch self {
+    case .array(let value):
+      return value
+    default:
+      return []
     }
   }
 }

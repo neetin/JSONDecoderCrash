@@ -18,6 +18,11 @@ static let jsonString = """
     "screen": {
         "name": "Screen",
         "properties": {
+            "screen1Config": null,
+            "screen2Config": null,
+            "screen3Config": null,
+            "screen4Config": null,
+            "screen5Config": null,
             "screen0Config": {
                 "type": "array",
                 "constructType": "screenConfig",
